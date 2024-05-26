@@ -1,33 +1,124 @@
-# Gradle files
-.gradle/
-build/
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Star Wars Spiel</title>
+    <style>
+        body { margin: 0; overflow: hidden; }
+        canvas { display: block; }
+        #story {
+            position: absolute;
+            top: 10px;
+            width: 100%;
+            text-align: center;
+            color: white;
+            font-size: 24px;
+        }
+    </style>
+</head>
+<body>
+    <div id="story"></div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
+    <script>
+        let scene, camera, renderer, player;
+        let checkpoints = [];
+        let currentCheckpoint = 0;
+        let storyText = [
+            "Willkommen zum Spiel! Beginne deine Reise.",
+            "Checkpoint 1 erreicht! Weiter geht's.",
+            "Checkpoint 2 erreicht! Fast da.",
+            "Du hast das Ziel erreicht! Gut gemacht."
+        ];
 
-# Local configuration file (sdk path, etc)
-local.properties
+        function init() {
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x000000);
 
-# Log/OS Files
-*.log
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.z = 5;
 
-# Android Studio generated files and folders
-captures/
-.externalNativeBuild/
-.cxx/
-*.apk
-output.json
+            renderer = new THREE.WebGLRenderer();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
 
-# IntelliJ
-*.iml
-.idea/
-misc.xml
-deploymentTargetDropDown.xml
-render.experimental.xml
+            const light = new THREE.DirectionalLight(0xffffff, 1);
+            light.position.set(0, 1, 1).normalize();
+            scene.add(light);
 
-# Keystore files
-*.jks
-*.keystore
+            const loader = new THREE.GLTFLoader();
+            loader.load('mercedes-benz_g-class_free_download_glTF.zip', (gltf) => {
+                player = gltf.scene;
+                player.scale.set(0.5, 0.5, 0.5);
+                scene.add(player);
+            }, undefined, (error) => {
+                console.error(error);
+            });
 
-# Google Services (e.g. APIs or Firebase)
-google-services.json
+            createCheckpoints();
+            document.addEventListener('keydown', onDocumentKeyDown, false);
+            animate();
+        }
 
-# Android Profiling
-*.hprof
+        function createCheckpoints() {
+            const positions = [
+                { x: 0, z: -5 },
+                { x: 5, z: -10 },
+                { x: -5, z: -15 }
+            ];
+
+            for (let pos of positions) {
+                const geometry = new THREE.SphereGeometry(0.5, 32, 32);
+                const material = new THREE.MeshBasicMaterial({ color: 0xffff00 });
+                const checkpoint = new THREE.Mesh(geometry, material);
+                checkpoint.position.set(pos.x, 0, pos.z);
+                scene.add(checkpoint);
+                checkpoints.push(checkpoint);
+            }
+
+            displayStory(0);
+        }
+
+        function displayStory(index) {
+            document.getElementById('story').innerText = storyText[index];
+        }
+
+        function onDocumentKeyDown(event) {
+            var keyCode = event.which;
+            if (player) {
+                if (keyCode == 87) { // W key
+                    player.position.z -= 0.1;
+                } else if (keyCode == 83) { // S key
+                    player.position.z += 0.1;
+                } else if (keyCode == 65) { // A key
+                    player.position.x -= 0.1;
+                } else if (keyCode == 68) { // D key
+                    player.position.x += 0.1;
+                }
+                checkCheckpoint();
+            }
+        }
+
+        function checkCheckpoint() {
+            if (currentCheckpoint < checkpoints.length) {
+                const checkpoint = checkpoints[currentCheckpoint];
+                const distance = player.position.distanceTo(checkpoint.position);
+                if (distance < 0.5) {
+                    currentCheckpoint++;
+                    if (currentCheckpoint < storyText.length) {
+                        displayStory(currentCheckpoint);
+                    }
+                }
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+            renderer.render(scene, camera);
+        }
+
+        init();
+    </script>
+</body>
+</html>
